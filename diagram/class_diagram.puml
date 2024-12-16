@@ -1,0 +1,212 @@
+@startuml
+' Singleton Classes
+class Player {
+  - instance: Player
+  - name: string
+  - health: double
+  - score: double
+  - currency: double
+  + getInstance(): Player
+}
+
+class GameManager {
+  - instance: GameManager
+  - isGameOver: boolean
+  + getInstance(): GameManager
+  + spawnWave()
+}
+
+Player --> Player : Singleton
+GameManager --> GameManager : Singleton
+
+' Enemy Factory
+interface EnemyFactory {
+  + CreateEnemy(): Enemy
+}
+
+class WalkingEnemy_Factory {
+  + CreateEnemy(): Enemy
+}
+
+class FlyingEnemy_Factory {
+  + CreateEnemy(): Enemy
+}
+
+class TankEnemy_Factory {
+  + CreateEnemy(): Enemy
+}
+
+EnemyFactory <|-- WalkingEnemy_Factory
+EnemyFactory <|-- FlyingEnemy_Factory
+EnemyFactory <|-- TankEnemy_Factory
+
+' Abstract Enemy
+abstract class Enemy {
+  - state: State
+  - health: double
+  - type: string
+  + clone(): Enemy
+  + move()
+  + changeState(state)
+}
+
+class WalkingEnemy {
+  + move()
+}
+
+class FlyingEnemy {
+  + move()
+}
+
+class TankEnemy {
+  + move()
+}
+
+Enemy <|-- WalkingEnemy
+Enemy <|-- FlyingEnemy
+Enemy <|-- TankEnemy
+
+EnemyFactory --> Enemy
+
+' Prototype and State
+abstract class State {
+  + setContext(enemy)
+  + applyEffect()
+}
+
+class Slowed {
+  + applyEffect()
+}
+
+class Paralyzed {
+  + applyEffect()
+}
+
+class Dead {
+  + applyEffect()
+}
+
+class Burned {
+  + applyEffect()
+}
+
+State <|-- Slowed
+State <|-- Paralyzed
+State <|-- Dead
+State <|-- Burned
+
+Enemy o--> State : has
+
+' Chain of Responsibility: Wave
+interface Wave {
+  + setNext(w: Wave)
+  + generateWave()
+}
+
+class BaseWave {
+  - count: static int
+  - difficulty: int
+  + setNext(w: Wave)
+  + generateWave()
+}
+
+class Wave_1 {
+  + generateWave()
+}
+
+class Wave_2 {
+  + generateWave()
+}
+
+class Wave_3 {
+  + generateWave()
+}
+
+class Wave_4 {
+  + generateWave()
+}
+
+BaseWave <|-- Wave_1
+BaseWave <|-- Wave_2
+BaseWave <|-- Wave_3
+BaseWave <|-- Wave_4
+
+Wave <|-- BaseWave
+Wave_1 --> Wave_2 : next
+Wave_2 --> Wave_3 : next
+Wave_3 --> Wave_4 : next
+
+Wave_4 --> Enemy : Boss: Enemy
+
+' Tower Factory
+interface TowerFactory {
+  + CreateTower(): Tower
+}
+
+class MachineGun_Factory {
+  + CreateTower(): Tower
+}
+
+class Canon_Factory {
+  + CreateTower(): Tower
+}
+
+class Laser_Factory {
+  + CreateTower(): Tower
+}
+
+TowerFactory <|-- MachineGun_Factory
+TowerFactory <|-- Canon_Factory
+TowerFactory <|-- Laser_Factory
+
+' Towers and Decorators
+abstract class Tower {
+  - level: int
+  - health: double
+  - price: double
+  + attack()
+}
+
+class MachineGunTower {
+  - attackPerSecond: double
+  + attack()
+}
+
+class CanonTower {
+  - areaOfEffect: double
+  + attack()
+}
+
+class LaserTower {
+  - damageOverTime: double
+  + attack()
+}
+
+Tower <|-- MachineGunTower
+Tower <|-- CanonTower
+Tower <|-- LaserTower
+
+abstract class TowerDecorator {
+  - probability: double
+  + execute()
+}
+
+class LightningEffect {
+  + execute()
+}
+
+class FireEffect {
+  + execute()
+}
+
+class IceEffect {
+  + execute()
+}
+
+TowerDecorator <|-- LightningEffect
+TowerDecorator <|-- FireEffect
+TowerDecorator <|-- IceEffect
+
+TowerDecorator --> Tower : Decorator
+
+@enduml
