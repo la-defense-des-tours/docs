@@ -1,4 +1,5 @@
 @startuml
+
 ' Singleton Classes
 class Player {
   - instance: Player
@@ -9,15 +10,19 @@ class Player {
   + getInstance(): Player
 }
 
-class GameManager {
-  - instance: GameManager
+class LevelManager {
+  - instance: LevelManager
+  - wavesList: List<Wave>
   - isGameOver: boolean
-  + getInstance(): GameManager
-  + spawnWave()
+  - homeBase: Player
+  + changeState()
+  + walkTowards(Wave)
+  + walkTowards(Base)
+  + getInstance(): LevelManager
 }
 
 Player --> Player : Singleton
-GameManager --> GameManager : Singleton
+LevelManager --> LevelManager : Singleton
 
 ' Enemy Factory
 interface EnemyFactory {
@@ -36,9 +41,14 @@ class TankEnemy_Factory {
   + CreateEnemy(): Enemy
 }
 
+class BossFactory {
+  + CreateEnemy(): Enemy
+}
+
 EnemyFactory <|-- WalkingEnemy_Factory
 EnemyFactory <|-- FlyingEnemy_Factory
 EnemyFactory <|-- TankEnemy_Factory
+EnemyFactory <|-- BossFactory
 
 ' Abstract Enemy
 abstract class Enemy {
@@ -51,26 +61,35 @@ abstract class Enemy {
 }
 
 class WalkingEnemy {
-  + move()
+  + setupSpeed()
 }
 
 class FlyingEnemy {
-  + move()
+  + setupSpeed()
 }
 
 class TankEnemy {
-  + move()
+  + setupSpeed()
+}
+
+class BossEnemy {
+  + setupSpeed()
 }
 
 Enemy <|-- WalkingEnemy
 Enemy <|-- FlyingEnemy
 Enemy <|-- TankEnemy
+Enemy <|-- BossEnemy
 
 EnemyFactory --> Enemy
 
 ' Prototype and State
 abstract class State {
   + setContext(enemy)
+  + applyEffect()
+}
+
+class Normal {
   + applyEffect()
 }
 
@@ -90,6 +109,7 @@ class Burned {
   + applyEffect()
 }
 
+State <|-- Normal
 State <|-- Slowed
 State <|-- Paralyzed
 State <|-- Dead
@@ -98,73 +118,63 @@ State <|-- Burned
 Enemy o--> State : has
 
 ' Chain of Responsibility: Wave
-interface Wave {
-  + setNext(w: Wave)
-  + generateWave()
-}
-
-class BaseWave {
-  - count: static int
-  - difficulty: int
-  + setNext(w: Wave)
-  + generateWave()
+abstract class Waves {
+  - nextWave: Wave
+  + setNextWave(Wave)
+  + spawnEnemies(positions)
 }
 
 class Wave_1 {
-  + generateWave()
+  + spawnEnemies()
 }
 
 class Wave_2 {
-  + generateWave()
+  + spawnEnemies()
 }
 
 class Wave_3 {
-  + generateWave()
+  + spawnEnemies()
 }
 
 class Wave_4 {
-  + generateWave()
+  + spawnEnemies()
 }
 
-BaseWave <|-- Wave_1
-BaseWave <|-- Wave_2
-BaseWave <|-- Wave_3
-BaseWave <|-- Wave_4
+Waves <|-- Wave_1
+Waves <|-- Wave_2
+Waves <|-- Wave_3
+Waves <|-- Wave_4
 
-Wave <|-- BaseWave
 Wave_1 --> Wave_2 : next
 Wave_2 --> Wave_3 : next
 Wave_3 --> Wave_4 : next
 
-Wave_4 --> Enemy : Boss: Enemy
-
 ' Tower Factory
 interface TowerFactory {
-  + CreateTower(): Tower
+  + CreateTower(position): Tower
 }
 
-class MachineGun_Factory {
-  + CreateTower(): Tower
+class MachineGunFactory {
+  + CreateTower(position): Tower
 }
 
-class Canon_Factory {
-  + CreateTower(): Tower
+class CanonFactory {
+  + CreateTower(position): Tower
 }
 
-class Laser_Factory {
-  + CreateTower(): Tower
+class LaserFactory {
+  + CreateTower(position): Tower
 }
 
-TowerFactory <|-- MachineGun_Factory
-TowerFactory <|-- Canon_Factory
-TowerFactory <|-- Laser_Factory
+TowerFactory <|-- MachineGunFactory
+TowerFactory <|-- CanonFactory
+TowerFactory <|-- LaserFactory
 
-' Towers and Decorators
+' Towers and Bridge
 abstract class Tower {
-  - level: int
-  - health: double
-  - price: double
+  - shooter: Shooter
   + attack()
+  + setStrategy()
 }
 
 class MachineGunTower {
@@ -186,21 +196,48 @@ Tower <|-- MachineGunTower
 Tower <|-- CanonTower
 Tower <|-- LaserTower
 
+' Strategy Pattern
+interface Strategy {
+  + selectTarget(enemies, towerPosition, range)
+}
+
+class HighestHP {
+  + selectTarget()
+}
+
+class HighestSpeed {
+  + selectTarget()
+}
+
+class NearestBase {
+  + selectTarget()
+}
+
+class NearestEnemy {
+  + selectTarget()
+}
+
+Strategy <|-- HighestHP
+Strategy <|-- HighestSpeed
+Strategy <|-- NearestBase
+Strategy <|-- NearestEnemy
+
+' Tower Decorators
 abstract class TowerDecorator {
   - probability: double
-  + execute()
+  + applyEffect()
 }
 
 class LightningEffect {
-  + execute()
+  + applyEffect()
 }
 
 class FireEffect {
-  + execute()
+  + applyEffect()
 }
 
 class IceEffect {
-  + execute()
+  + applyEffect()
 }
 
 TowerDecorator <|-- LightningEffect
@@ -208,5 +245,59 @@ TowerDecorator <|-- FireEffect
 TowerDecorator <|-- IceEffect
 
 TowerDecorator --> Tower : Decorator
+
+' Template and Object Pool
+abstract class Bullet {
+  + hitTarget()
+  + handleTrajectory()
+}
+
+class LaserBullet {
+  + hitTarget()
+  + handleTrajectory()
+}
+
+class MachineGunBullet {
+  + hitTarget()
+  + handleTrajectory()
+}
+
+class CanonBullet {
+  + hitTarget()
+  + handleTrajectory()
+}
+
+Bullet <|-- LaserBullet
+Bullet <|-- MachineGunBullet
+Bullet <|-- CanonBullet
+
+class BulletPool {
+  - instance: BulletPool
+  + getBullet(type): Bullet
+  + objectPool: Queue<Bullet>
+}
+
+BulletPool --> Bullet : manages
+
+' Bridge Pattern
+abstract class Shooter {
+  + rotateTower()
+  + shoot()
+  + spawnBullet()
+}
+
+class ProjectileShooter {
+  + shoot()
+}
+
+class LaserShooter {
+  + shoot()
+  + updateTarget()
+}
+
+Shooter <|-- ProjectileShooter
+Shooter <|-- LaserShooter
+
+Tower --> Shooter : has
 
 @enduml
